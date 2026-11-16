@@ -8,7 +8,7 @@ import {
   type TransactionEventBroadcaster,
 } from '@mikro-orm/core';
 import { StatusIds_StatusCode as Status, type Operation } from '@ydbjs/api/operation';
-import { SchemeServiceDefinition } from '@ydbjs/api/scheme';
+import { Entry_Type, ListDirectoryResultSchema, SchemeServiceDefinition } from '@ydbjs/api/scheme';
 import {
   BeginTransactionResultSchema,
   CreateSessionResultSchema,
@@ -323,15 +323,16 @@ export class YdbConnection extends Connection {
     });
   }
 
-  async executeScheme(sql: string): Promise<void> {
+  async executeScheme(sql: string, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     await this.ensureConnection();
-    const session = await this.acquire();
+    const session = await this.acquire(signal);
     try {
       await this.executeQuery(sql, async () => {
         const response = await this.rpc(() =>
           session.client.executeSchemeQuery(
             { sessionId: session.id, yqlText: sql },
-            { signal: this.signal(this.settings().queryTimeoutMs ?? 30_000) },
+            { signal: this.signal(this.settings().queryTimeoutMs ?? 30_000, signal) },
           ),
         );
         this.checkOperation(response.operation);
@@ -341,6 +342,35 @@ export class YdbConnection extends Connection {
       throw this.convert(error);
     } finally {
       await this.release(session);
+    }
+  }
+
+  /** List native row tables within the configured database, including subdirectories. */
+  async listTables(): Promise<string[]> {
+    await this.ensureConnection();
+    const database = this.#driver!.database.replace(/\/$/, '');
+    const client = this.#driver!.createClient(SchemeServiceDefinition);
+    const tables: string[] = [];
+    const visit = async (relative: string): Promise<void> => {
+      const response = await this.rpc(() =>
+        client.listDirectory(
+          { path: relative ? `${database}/${relative}` : database },
+          { signal: this.signal(this.settings().queryTimeoutMs ?? 30_000) },
+        ),
+      );
+      const result = this.unpack(response.operation, ListDirectoryResultSchema);
+      for (const child of result.children) {
+        if (child.name.startsWith('.')) continue;
+        const path = relative ? `${relative}/${child.name}` : child.name;
+        if (child.type === Entry_Type.TABLE) tables.push(path);
+        else if (child.type === Entry_Type.DIRECTORY) await visit(path);
+      }
+    };
+    try {
+      await visit('');
+      return tables;
+    } catch (error) {
+      throw this.convert(error);
     }
   }
 
@@ -538,9 +568,26 @@ export class YdbConnection extends Connection {
       transaction.state = 'rolledBack';
       this.logQuery('rollback;', loggerContext);
     } catch (error) {
-      transaction.state = 'failed';
-      transaction.session.invalid = true;
-      throw this.convert(error);
+      const missingTransaction = (issue: unknown): boolean => {
+        if (issue == null || typeof issue !== 'object') return false;
+        const entry = issue as { issueCode?: unknown; message?: unknown; issues?: unknown };
+        return (
+          (entry.issueCode === 2015 &&
+            typeof entry.message === 'string' &&
+            /^Transaction not found(?::|\s*$)/i.test(entry.message.trim())) ||
+          (Array.isArray(entry.issues) && entry.issues.some(missingTransaction))
+        );
+      };
+      if (error instanceof YDBError && error.code === Status.NOT_FOUND && error.issues.some(missingTransaction)) {
+        // A failed statement can already have aborted this locally owned transaction.
+        // This precise server response confirms there are no remaining writes to undo.
+        transaction.state = 'rolledBack';
+        this.logQuery('rollback;', loggerContext);
+      } else {
+        transaction.state = 'failed';
+        transaction.session.invalid = true;
+        throw this.convert(error);
+      }
     } finally {
       transaction.busy = false;
       this.#transactions.delete(transaction);
@@ -550,6 +597,11 @@ export class YdbConnection extends Connection {
       throw eventError;
     }
     await eventBroadcaster?.dispatchEvent(EventType.afterTransactionRollback, transaction);
+  }
+
+  /** @internal Whether the native pool still owns the transaction's session, including failed statements. */
+  hasTransaction(transaction: YdbTransaction): boolean {
+    return transaction.connection === this && this.#transactions.has(transaction);
   }
 
   private assertTransaction(transaction: YdbTransaction): YdbTransaction {

@@ -1,7 +1,7 @@
 {
   "name": "@rozenshtein94/mikro-orm-ydb",
-  "version": "0.1.1",
-  "description": "Native YQL driver for MikroORM and YDB",
+  "version": "0.2.0",
+  "description": "Native YQL SQL and core drivers for MikroORM and YDB",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -17,6 +17,7 @@
   "files": [
     "dist",
     "README.md",
+    "SQL.md",
     "VERIFICATION.md",
     "LICENSE"
   ],
@@ -38,7 +39,10 @@
     "test:integration": "YDB_INTEGRATION=1 vitest run tests/integration.test.ts"
   },
   "peerDependencies": {
-    "@mikro-orm/core": "^7.2.9"
+    "@mikro-orm/core": "^7.2.9",
+    "@mikro-orm/migrations": "^7.2.9",
+    "@mikro-orm/sql": "^7.2.9",
+    "kysely": "^0.29.8"
   },
   "dependencies": {
     "@bufbuild/protobuf": "2.12.0",
@@ -49,7 +53,10 @@
   },
   "devDependencies": {
     "@mikro-orm/core": "7.2.9",
+    "@mikro-orm/migrations": "7.2.9",
+    "@mikro-orm/sql": "7.2.9",
     "@types/node": "26.6.6",
+    "kysely": "0.29.8",
     "oxfmt": "0.78.0",
     "oxlint": "1.93.0",
     "oxlint-tsgolint": "^7.0.0",

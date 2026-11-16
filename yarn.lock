@@ -123,6 +123,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mikro-orm/migrations@npm:7.2.9":
+  version: 7.2.9
+  resolution: "@mikro-orm/migrations@npm:7.2.9"
+  dependencies:
+    "@mikro-orm/sql": "npm:7.2.9"
+  peerDependencies:
+    "@mikro-orm/core": 7.2.9
+  checksum: 10c0/c0ba4f23d82e139ab27d23b22a0addf23e8325fde900b78c5fbeafee93815cd33187bd840e4928f5ccadb0bd9a8063320bff9d22b1dd8d91d00f05088c9e2e9b
+  languageName: node
+  linkType: hard
+
+"@mikro-orm/sql@npm:7.2.9":
+  version: 7.2.9
+  resolution: "@mikro-orm/sql@npm:7.2.9"
+  dependencies:
+    kysely: "npm:0.29.8"
+  peerDependencies:
+    "@mikro-orm/core": 7.2.9
+  checksum: 10c0/bc82cc50ab6596fa0f3807be75868d397bbd7c2cf8abb016a827a099c5dcfc0a04a2e62e03b7a3ce3432f5302fe3d81a7681569f37a18edf9a28faf4a2f0883a
+  languageName: node
+  linkType: hard
+
 "@napi-rs/wasm-runtime@npm:1.2.6":
   version: 1.2.6
   resolution: "@napi-rs/wasm-runtime@npm:1.2.6"
@@ -644,11 +666,14 @@ __metadata:
   dependencies:
     "@bufbuild/protobuf": "npm:2.12.0"
     "@mikro-orm/core": "npm:7.2.9"
+    "@mikro-orm/migrations": "npm:7.2.9"
+    "@mikro-orm/sql": "npm:7.2.9"
     "@types/node": "npm:26.6.6"
     "@ydbjs/api": "npm:6.0.7"
     "@ydbjs/core": "npm:6.3.1"
     "@ydbjs/error": "npm:6.0.6"
     "@ydbjs/value": "npm:6.0.8"
+    kysely: "npm:0.29.8"
     oxfmt: "npm:0.78.0"
     oxlint: "npm:1.93.0"
     oxlint-tsgolint: "npm:^7.0.0"
@@ -657,6 +682,9 @@ __metadata:
     vitest: "npm:5.1.0"
   peerDependencies:
     "@mikro-orm/core": ^7.2.9
+    "@mikro-orm/migrations": ^7.2.9
+    "@mikro-orm/sql": ^7.2.9
+    kysely: ^0.29.8
   languageName: unknown
   linkType: soft
 
@@ -1177,6 +1205,13 @@ __metadata:
   version: 4.0.0
   resolution: "isexe@npm:4.0.0"
   checksum: 10c0/5884815115bceac452877659a9c7726382531592f43dc29e5d48b7c4100661aed54018cb90bd36cb2eaeba521092570769167acbb95c18d39afdccbcca06c5ce
+  languageName: node
+  linkType: hard
+
+"kysely@npm:0.29.8":
+  version: 0.29.8
+  resolution: "kysely@npm:0.29.8"
+  checksum: 10c0/d0f55f2463ef6e90aa42782ce352970182b09f49f1d47e8a952f443ab24f96b4be1b411a68f82dbe63f0c2233a8f313e819a87bc7bd92086a2a822bcd9ca630f
   languageName: node
   linkType: hard
 

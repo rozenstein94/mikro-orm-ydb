@@ -295,6 +295,82 @@ describe('YDB native connection lifecycle', () => {
       await connection.close();
     }
   });
+
+  it('treats an owned transaction already aborted by the server as rolled back only for issue 2015', async () => {
+    const { connection, client } = fixture();
+    const transaction = await connection.begin();
+    client.executeDataQuery.mockResolvedValue(status(Status.BAD_REQUEST));
+    await expect(connection.query('SELECT invalid', {}, transaction)).rejects.toThrow();
+    expect(transaction.state).toBe('failed');
+    expect(connection.hasTransaction(transaction)).toBe(true);
+    client.rollbackTransaction.mockResolvedValue({
+      operation: create(OperationSchema, {
+        ready: true,
+        status: Status.NOT_FOUND,
+        issues: [{ issueCode: 2015, message: 'Transaction not found: tx1' }],
+      }),
+    });
+    try {
+      await connection.rollback(transaction);
+      expect(transaction.state).toBe('rolledBack');
+      expect(connection.hasTransaction(transaction)).toBe(false);
+      const next = await connection.begin();
+      await connection.rollback(next);
+      expect(client.createSession).toHaveBeenCalledTimes(1);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it.each([
+    { code: Status.NOT_FOUND, issueCode: 2016, message: 'Transaction not found: tx1' },
+    { code: Status.NOT_FOUND, issueCode: 2015, message: 'Table not found: sample' },
+    { code: Status.BAD_REQUEST, issueCode: 2015, message: 'Transaction not found: tx1' },
+  ])('does not suppress another rollback error ($code/$issueCode/$message)', async ({ code, issueCode, message }) => {
+    const { connection, client } = fixture();
+    const transaction = await connection.begin();
+    client.rollbackTransaction.mockResolvedValue({
+      operation: create(OperationSchema, {
+        ready: true,
+        status: code,
+        issues: [{ issueCode, message }],
+      }),
+    });
+    try {
+      await expect(connection.rollback(transaction)).rejects.toThrow();
+      expect(connection.hasTransaction(transaction)).toBe(false);
+      expect(client.deleteSession).toHaveBeenCalledOnce();
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it('preserves a rollback subscriber failure when the server confirms the transaction is already gone', async () => {
+    const { connection, client } = fixture();
+    const transaction = await connection.begin();
+    const failure = new Error('rollback subscriber failed');
+    client.rollbackTransaction.mockResolvedValue({
+      operation: create(OperationSchema, {
+        ready: true,
+        status: Status.NOT_FOUND,
+        issues: [{ issueCode: 2015, message: 'Transaction not found: tx1' }],
+      }),
+    });
+    try {
+      await expect(
+        connection.rollback(transaction, {
+          dispatchEvent: vi.fn(async () => {
+            throw failure;
+          }),
+        } as never),
+      ).rejects.toBe(failure);
+      expect(transaction.state).toBe('rolledBack');
+      expect(connection.hasTransaction(transaction)).toBe(false);
+      expect(client.rollbackTransaction).toHaveBeenCalledOnce();
+    } finally {
+      await connection.close();
+    }
+  });
 });
 
 describe('YDB error conversion', () => {

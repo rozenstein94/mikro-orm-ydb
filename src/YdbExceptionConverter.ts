@@ -14,6 +14,7 @@ import {
 } from '@mikro-orm/core';
 import { StatusIds_StatusCode as Status } from '@ydbjs/api/operation';
 import { YDBError } from '@ydbjs/error';
+import { AbortedTransactionError } from 'kysely';
 
 function issueMessages(issues: unknown): string[] {
   if (!Array.isArray(issues)) {
@@ -47,12 +48,15 @@ export function isYdbTableNotFound(error: unknown): boolean {
 /** Converts YDB status codes without treating all schema or precondition errors alike. */
 export class YdbExceptionConverter extends ExceptionConverter {
   override convertException(exception: Error & Dictionary): DriverException {
+    if (exception instanceof AbortedTransactionError && exception.cause instanceof DriverException)
+      return exception.cause;
     if (exception instanceof DriverException) {
       return exception;
     }
 
     if (exception instanceof YDBError) {
       const detail = errorText(exception);
+      exception.message = detail;
       if (exception.code === Status.SCHEME_ERROR && isYdbTableNotFound(exception)) {
         return new TableNotFoundException(exception);
       }

@@ -1,38 +1,41 @@
 # MikroORM YDB driver
 
-A third-party MikroORM driver for native YDB tables through YQL and the official JavaScript SDK's Table API. It uses MikroORM's core `DatabaseDriver`, so entity creation, change tracking, Unit of Work, Identity Map, repositories, and select-in relation loading remain in MikroORM.
+Native YQL drivers for MikroORM and YDB, using the official JavaScript SDK's Table API.
 
-This package supports **MikroORM `^7.2.9`**, **Node.js 22.17 or newer**, and the supported subset below. The test suite uses 7.2.9 as the compatibility floor, and CI also installs the newest stable core satisfying the peer range for the packaged consumer check. It is independent of the MikroORM maintainers. It does not implement a Kysely/Knex dialect or expose the SQL QueryBuilder. It does not use YDB Document API and makes no AWS DynamoDB compatibility claim.
+The **0.2.0 SQL implementation** adds `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It provides SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](https://github.com/rozenstein94/mikro-orm-ydb/blob/v0.2.0/SQL.md) for setup, supported features, engine limitations and migration configuration. Version **0.1.1** is the earlier core-only driver; use **0.2.0** for the SQL implementation.
 
-Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). The delivery follows the third-party-first direction in [MikroORM discussion #5770](https://github.com/mikro-orm/mikro-orm/discussions/5770); the current upstream proposal is [#8735](https://github.com/mikro-orm/mikro-orm/issues/8735).
+`YdbDriver` retains the core `DatabaseDriver` API described below. Its supported feature set is narrower than `YdbSqlDriver`. Both use MikroORM's EntityManager, Unit of Work and Identity Map. The package targets **MikroORM `^7.2.9`** and **Node.js 22.17 or newer**; all MikroORM packages in an application must use matching versions. Tests pin 7.2.9 as the floor, and the packaged consumer checks the newest stable version in range. This is an independent community package. It uses native YDB, with no Document API or AWS DynamoDB compatibility claim.
 
-## Install
+Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). Related upstream discussions: [#5770](https://github.com/mikro-orm/mikro-orm/discussions/5770) and [#8736](https://github.com/mikro-orm/mikro-orm/discussions/8736).
+
+## Core driver installation
 
 Install the [public npm package](https://www.npmjs.com/package/@rozenshtein94/mikro-orm-ydb) and a compatible MikroORM core:
 
 ```sh
-npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb
+npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb@0.1.1
 ```
 
-The repository also supports building a package from source:
+Build the SQL implementation from its feature branch as described in [SQL.md](https://github.com/rozenstein94/mikro-orm-ydb/blob/v0.2.0/SQL.md). To build the current source package:
 
 ```sh
-git clone https://github.com/rozenstein94/mikro-orm-ydb.git
+git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
-npx --yes corepack yarn pack --out mikro-orm-ydb-0.1.1.tgz
+npx --yes corepack yarn pack --out mikro-orm-ydb-0.2.0.tgz
 ```
 
 From the consuming application's directory, install the packed artifact and a compatible MikroORM peer:
 
 ```sh
-npm install '@mikro-orm/core@^7.2.9' /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.1.1.tgz
+npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 kysely@0.29.8 \
+  /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.2.0.tgz
 ```
 
 The package exports ESM and TypeScript declarations. Its `prepack` hook builds `dist/` before creating an archive. Commit the resulting application lockfile when building deployment artifacts.
 
-## Connect and use entities
+## Core driver connection and entities
 
 The local example needs no credentials. It connects to an existing database; it does not provision one.
 
@@ -324,13 +327,13 @@ docker compose down
 | Local test server | `ydbplatform/local-ydb:26.3.1.25` |
 | MikroORM 6.6.14 | Requires a separate backport/build and its own real-YDB validation; unsupported by this package's peer range |
 
-Current MikroORM v7 SQL packages use Kysely; v6.6.14 used `@mikro-orm/knex`. This driver's core-level implementation avoids either SQL dependency, but the core driver signatures still differ between majors. An isolated build with the published `@mikro-orm/core@6.6.14` was attempted and fails: v6 requires `Connection.getDefaultClientUrl`, lacks the v7 `onConnect` hook and `@mikro-orm/core/schema` entry point, and uses `createSchema`/`updateSchema`/`clearDatabase` generator methods. A v6 backport must adapt these interfaces, `EntityName`/string handling, EntityManager typing, driver method generic defaults, and cancellation/lifecycle APIs, then build and rerun the same database scenarios against core 6.6.14. Changing the peer range alone is not a compatibility fix.
+Current MikroORM v7 SQL packages use Kysely; v6.6.14 used `@mikro-orm/knex`. The core-level implementation does not use either SQL API, while the new SQL implementation uses the v7 SQL contracts. Both require a separate backport because the core driver signatures and SQL APIs differ between majors. An isolated build with the published `@mikro-orm/core@6.6.14` was attempted and fails: v6 requires `Connection.getDefaultClientUrl`, lacks the v7 `onConnect` hook and `@mikro-orm/core/schema` entry point, and uses `createSchema`/`updateSchema`/`clearDatabase` generator methods. A v6 backport must adapt these interfaces, `EntityName`/string handling, EntityManager typing, driver method generic defaults, and cancellation/lifecycle APIs, then build and rerun the same database scenarios against core 6.6.14. Changing the peer range alone is not a compatibility fix.
 
 See [VERIFICATION.md](VERIFICATION.md) for the recorded validation and its boundaries.
 
 Applications pinned to MikroORM 6.6.14 require a separately tested backport. PostgreSQL/Knex-specific queries, migrations, services, indexes, constraints, and application assumptions need a separate audit and port.
 
-Unsupported features include SQL QueryBuilder, SQL migrations/entity generation, secondary/unique indexes, one-to-one and many-to-many relations, embedded or polymorphic entities, inheritance/views, version properties, generated columns, raw SQL expressions/defaults, autoincrement, SQL schemas, read replicas configured through MikroORM, and database provisioning. These are driver boundaries, not a claim that YDB itself lacks every listed feature.
+For the core `YdbDriver`, unsupported features include SQL QueryBuilder, SQL migrations/entity generation, secondary/unique indexes, one-to-one and many-to-many relations, embedded or polymorphic entities, inheritance/views, version properties, generated columns, raw SQL expressions/defaults, autoincrement, SQL schemas, read replicas configured through MikroORM, and database provisioning. These are driver boundaries, not a claim that YDB itself lacks every listed feature.
 
 ## Contributing and license
 

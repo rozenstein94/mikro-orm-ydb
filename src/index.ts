@@ -3,3 +3,8 @@ export { YdbPlatform } from './YdbPlatform.js';
 export { YdbConnection, type YdbConnectionOptions, type YdbTransaction } from './YdbConnection.js';
 export { YdbExceptionConverter } from './YdbExceptionConverter.js';
 export { YdbSchemaGenerator } from './YdbSchemaGenerator.js';
+export { YdbSqlDriver } from './YdbSqlDriver.js';
+export { YdbSqlPlatform } from './YdbSqlPlatform.js';
+export { YdbSqlConnection } from './YdbSqlConnection.js';
+export { YdbMigrator, YdbMigrationStorage } from './YdbMigrator.js';
+export { YdbDialect } from './YdbDialect.js';
