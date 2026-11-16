@@ -2,29 +2,35 @@
 
 A third-party MikroORM driver for native YDB tables through YQL and the official JavaScript SDK's Table API. It uses MikroORM's core `DatabaseDriver`, so entity creation, change tracking, Unit of Work, Identity Map, repositories, and select-in relation loading remain in MikroORM.
 
-This package targets **MikroORM 7.2.9**, **Node.js 22.17 or newer**, and the supported subset below. It is independent of the MikroORM maintainers. It does not implement a Kysely/Knex dialect or expose the SQL QueryBuilder. It does not use YDB Document API and makes no AWS DynamoDB compatibility claim.
+This package supports **MikroORM `^7.2.9`**, **Node.js 22.17 or newer**, and the supported subset below. The test suite uses 7.2.9 as the compatibility floor, and CI also installs the newest stable core satisfying the peer range for the packaged consumer check. It is independent of the MikroORM maintainers. It does not implement a Kysely/Knex dialect or expose the SQL QueryBuilder. It does not use YDB Document API and makes no AWS DynamoDB compatibility claim.
 
 Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). The delivery follows the third-party-first direction in [MikroORM discussion #5770](https://github.com/mikro-orm/mikro-orm/discussions/5770); the current upstream proposal is [#8735](https://github.com/mikro-orm/mikro-orm/issues/8735).
 
 ## Install
 
-The package is supplied as source and a packable npm artifact. An npm registry publication is not assumed. Build it from this repository:
+Version 0.1.1 is prepared for public npm publication. Once it is available in the registry, install the package and a compatible MikroORM core:
+
+```sh
+npm install '@mikro-orm/core@^7.2.9' @rozenstein/mikro-orm-ydb
+```
+
+The repository also supports building a package from source:
 
 ```sh
 git clone https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
-npx --yes corepack yarn pack --out mikro-orm-ydb-0.1.0.tgz
+npx --yes corepack yarn pack --out mikro-orm-ydb-0.1.1.tgz
 ```
 
-From the consuming application's directory, install the packed artifact and its exact MikroORM peer:
+From the consuming application's directory, install the packed artifact and a compatible MikroORM peer:
 
 ```sh
-npm install @mikro-orm/core@7.2.9 /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.1.0.tgz
+npm install '@mikro-orm/core@^7.2.9' /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.1.1.tgz
 ```
 
-The package exports ESM and TypeScript declarations. Its exports point to the built `dist/` directory, so build and pack before installing from a source checkout. Commit the resulting application lockfile and use a pinned driver revision when building deployment artifacts.
+The package exports ESM and TypeScript declarations. Its `prepack` hook builds `dist/` before creating an archive. Commit the resulting application lockfile when building deployment artifacts.
 
 ## Connect and use entities
 
@@ -312,7 +318,7 @@ docker compose down
 
 | Component | Target |
 | --- | --- |
-| MikroORM | Exact peer `@mikro-orm/core@7.2.9`; all MikroORM packages in an application must use compatible matching versions |
+| MikroORM | Peer range `@mikro-orm/core@^7.2.9`; all MikroORM packages in an application must use compatible matching versions |
 | Node.js | ESM, 22.17.0 or newer |
 | YDB SDK | `@ydbjs/core@6.3.1`, `@ydbjs/api@6.0.7`, `@ydbjs/value@6.0.8`; `yarn.lock` records transitive versions |
 | Local test server | `ydbplatform/local-ydb:26.3.1.25` |

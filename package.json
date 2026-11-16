@@ -1,6 +1,6 @@
 {
   "name": "@rozenstein/mikro-orm-ydb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native YQL driver for MikroORM and YDB",
   "type": "module",
   "license": "MIT",
@@ -24,8 +24,13 @@
     "node": ">=22.17.0"
   },
   "packageManager": "yarn@4.18.1",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
     "lint": "oxlint src tests --tsconfig tsconfig.json --type-aware --type-check",
     "format": "oxfmt src tests scripts --write",
     "format:check": "oxfmt src tests scripts --check",
@@ -33,7 +38,7 @@
     "test:integration": "YDB_INTEGRATION=1 vitest run tests/integration.test.ts"
   },
   "peerDependencies": {
-    "@mikro-orm/core": "7.2.9"
+    "@mikro-orm/core": "^7.2.9"
   },
   "dependencies": {
     "@bufbuild/protobuf": "2.12.0",

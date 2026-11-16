@@ -21,3 +21,9 @@ The archive is built with `yarn pack` and checked from a separate consumer direc
 The upstream documentation contribution was also checked with the MikroORM monorepo's build, formatter/check, lint/typecheck, CLI help (with its workspace TS loader), and Docusaurus build. The full upstream baseline was executed: 4,475 tests passed, 576 failed and 3,611 skipped (647 failed/937 passed test files). External SQL services were absent in that baseline; that run is **not a green full regression result**. The driver introduces no changes to MikroORM's package sources or existing database suites.
 
 Local tests do not establish managed Serverless IAM/TLS, credential refresh, scale-to-zero latency, resource limits, failover or multi-node behavior. No paid cloud resources, secrets or production data are involved. The implementation is a third-party driver with the explicitly documented feature boundary, not a complete first-party SQL dialect.
+
+## Publication follow-up
+
+Version 0.1.1 changes the core peer to `^7.2.9`, while the development dependency remains pinned to 7.2.9 to test the lower bound. Build, formatting, lint/typecheck and all 74 tests passed again after this packaging change. A separate consumer installed the new archive together with `@mikro-orm/core@^7.2.9`; npm resolved one deduplicated core 7.2.9, and the real-YDB archive smoke check passed. At this check, 7.2.9 is also the newest stable version in the range; future unreleased versions are not claimed as tested.
+
+`npm pack` runs the new `prepack` build hook and includes the compiled JavaScript and declarations. `npm publish --dry-run --access public` succeeds. Registry publication still requires an authenticated npm account with rights to the package scope; a dry run does not publish the package. The existing GitHub v0.1.0 tag and archive remain unchanged.

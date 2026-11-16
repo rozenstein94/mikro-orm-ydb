@@ -27,7 +27,8 @@ jobs:
         run: |
           npx --yes corepack yarn pack --out "$RUNNER_TEMP/driver.tgz"
           mkdir -p "$RUNNER_TEMP/consumer"
-          npm install --prefix "$RUNNER_TEMP/consumer" --ignore-scripts @mikro-orm/core@7.2.9 "$RUNNER_TEMP/driver.tgz"
+          npm install --prefix "$RUNNER_TEMP/consumer" --ignore-scripts '@mikro-orm/core@^7.2.9' "$RUNNER_TEMP/driver.tgz"
+          npm ls --prefix "$RUNNER_TEMP/consumer" @mikro-orm/core --all
           cp scripts/smoke.mjs "$RUNNER_TEMP/consumer/smoke.mjs"
           node "$RUNNER_TEMP/consumer/smoke.mjs"
       - if: failure()

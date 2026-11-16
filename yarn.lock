@@ -656,7 +656,7 @@ __metadata:
     vite: "npm:8.3.8"
     vitest: "npm:5.1.0"
   peerDependencies:
-    "@mikro-orm/core": 7.2.9
+    "@mikro-orm/core": ^7.2.9
   languageName: unknown
   linkType: soft
 
