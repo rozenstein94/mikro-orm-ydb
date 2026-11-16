@@ -1,5 +1,17 @@
 # Verification record
 
+## 0.3.0 release preparation
+
+The release-preparation baseline is commit `be193c34ac4a932c7815f9ea9180f953ed3dd50e`. Against published MikroORM core/SQL/migrations **7.2.9** and one shared **Kysely 0.29.8**, the complete local suite passes **237/237 tests in 16 files, with no skipped tests**, together with formatting, build, and type-aware lint/typecheck. This includes the public extension API and physical `Decimal(35,18)` regression described in the historical evidence below. Decimal remains outside the default platform's feature policy.
+
+The [Node 22/24/26 CI run for that exact commit](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43869268593) is green. Each matrix job passes dependency installation, format check, build, lint/typecheck, the complete real-YDB suite, and verification of the built archive from an isolated consumer. That archive step runs the core, SQL, and extension smoke scripts against actual local YDB. It is packaged-source evidence, not a registry-installation result.
+
+The installation guides are prepared for **0.3.0** and builds from `main`. This section does **not** claim that 0.3.0 has been published, assigned the npm `latest` tag, or installed and verified from the registry. Final release source/tag, archive integrity, and post-publication registry smoke results must be recorded after those actions actually complete. The immutable 0.2.0 archive and the earlier candidate SHAs/results remain separate historical evidence.
+
+Dynamic discovery still requires explicit platform validation before schema/write operations. The migration lock policy still releases the lock after a caught migration error and does not make DDL/history atomic. Native YQL/Table API evidence does not establish PostgreSQL wire compatibility, MikroORM v6 support, cloud IAM/TLS, managed Serverless behavior, or application-specific portability.
+
+## Original core-driver validation
+
 Validated locally on 2026-11-16 with Node.js 26.8.1, Yarn 4.18.1, and the official `ydbplatform/local-ydb:26.3.1.25` container running a real single-node YDB database at `/local`. The container uses the checked-in Compose configuration and in-memory storage.
 
 ```sh
@@ -73,7 +85,7 @@ sha512-TTAiEOw0Vnpt2Bba1Wh8/x1aayjHnvPPDIddPbvI1IyzFFR6KdpSxY9daaU8XF8660dv30Frm
 
 [Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43858535575) passes build, formatting, lint/typecheck, all 207 tests and the packed-consumer checks. Later installation-documentation commits do not change the immutable 0.2.0 source tag or registry archive.
 
-## Public extension API source candidate (0.3.0)
+## Historical public extension API source candidate (0.3.0)
 
 The source candidate adds optional `YdbSqlDriverComponents`, public registered-metadata lookup, a protected column-type validator, public schema helper/query builder/value-factory exports, and native parameter-declaration/result-decoding hooks. Published 0.2.0 remains unchanged and does not contain this API. Dependency versions and the strict default feature policy are unchanged.
 

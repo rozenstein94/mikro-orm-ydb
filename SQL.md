@@ -2,40 +2,40 @@
 
 `YdbSqlDriver` integrates native YQL with MikroORM's **v7 SQL driver contracts**. It extends `AbstractSqlDriver` from `@mikro-orm/sql`, with a YDB Kysely dialect, YQL query compiler, native SQL builder, schema helper, and SQL migrator integration. Non-recursive CTEs are compiled to YQL named subqueries. EntityManager, SQL QueryBuilder, relation loading, repositories, Unit of Work, and Identity Map use MikroORM's SQL implementation.
 
-This document describes the SQL implementation in **0.2.0**. Version **0.1.1** is the earlier core-only driver and does not supply this SQL API. The **0.3.0 source candidate** additionally provides the public extension API documented in [EXTENDING.md](EXTENDING.md); those hooks are absent from published 0.2.0. See [VERIFICATION.md](VERIFICATION.md) for the exact tested versions, commands and evidence boundaries.
+This document describes the SQL driver in **0.3.0**, including the public extension API documented in [EXTENDING.md](EXTENDING.md). The immutable 0.2.0 release supplies the SQL driver without those extension hooks; 0.1.1 is the earlier core-only driver. See [VERIFICATION.md](VERIFICATION.md) for the exact tested versions, commands and evidence boundaries.
 
-The implementation targets MikroORM **7.2.9** and Kysely **0.29.8**. Keep the MikroORM packages in an application on matching versions. The package's `^7.2.9` peer ranges describe compatible v7 candidates; the pinned versions in this checkout are the concrete development baseline. This is a native YDB integration, with no Document API or AWS DynamoDB compatibility claim.
+The implementation targets MikroORM **7.2.9** and Kysely **0.29.8**. Keep the MikroORM packages in an application on matching versions. The package's `^7.2.9` peer ranges allow matching later v7 versions; the pinned versions in this checkout are the concrete validation baseline. The driver uses native YQL over YDB's gRPC Table API. It does not use PostgreSQL wire compatibility or Document API and makes no AWS DynamoDB compatibility claim.
 
-## Install the published SQL driver
+## Install the SQL driver
 
 ```sh
 npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 \
-  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.2.0
+  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.3.0
 npm ls @mikro-orm/core @mikro-orm/sql @mikro-orm/migrations kysely --all
 ```
 
-Version 0.2.0 is published on [npm](https://www.npmjs.com/package/@rozenshtein94/mikro-orm-ydb). Use a single shared Kysely runtime matching the installed SQL package. An unpinned automatic peer installation can produce mismatched Kysely copies even when all individual ranges appear satisfied; the explicit versions above are the verified published baseline.
+Use a single shared Kysely runtime matching the installed SQL package. An unpinned automatic peer installation can produce mismatched Kysely copies even when all individual ranges appear satisfied. The versions above match the tested MikroORM/Kysely baseline; release-artifact and registry checks are recorded separately in [VERIFICATION.md](VERIFICATION.md).
 
 ## Build from source
 
 ```sh
-git clone --branch feat/sql-driver-extensions https://github.com/rozenstein94/mikro-orm-ydb.git
+git clone --branch main https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
-npx --yes corepack yarn pack --out mikro-orm-ydb-sql.tgz
+npx --yes corepack yarn pack --out mikro-orm-ydb-0.3.0.tgz
 ```
 
 Install that artifact into the consuming application:
 
 ```sh
 npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 kysely@0.29.8 \
-  /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-sql.tgz
+  /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.3.0.tgz
 ```
 
 Kysely is a peer dependency. Use the exact Kysely version required by the installed `@mikro-orm/sql` package and deduplicate the tree: MikroORM 7.2.9 uses 0.29.8. The driver rejects a second, different Kysely runtime, which would break nominal TypeScript contracts and transaction-abort handling. Check the application's actual dependency graph with `npm ls @mikro-orm/core @mikro-orm/sql @mikro-orm/migrations kysely`; do not combine a newer SQL package with an older root Kysely copy.
 
-Use Node.js 22.17 or newer and ESM. The current source candidate's manifest version is 0.3.0, which does not imply registry publication; record the SQL source commit alongside the built artifact. A filename containing `sql` does not change its package version or publish it to npm. Pin the final release and commit the application lockfile when deploying.
+Use Node.js 22.17 or newer and ESM. Record the source commit alongside a source-built artifact, pin the deployed package version, and commit the application lockfile. Building or packing the source does not publish it to npm.
 
 ## Configure entities and the SQL driver
 

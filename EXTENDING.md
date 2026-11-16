@@ -1,6 +1,6 @@
 # Extending the YDB SQL driver
 
-The public extension API described here requires **0.3.0 or a source build containing these changes**. It is not part of the immutable 0.2.0 release. The baseline is MikroORM 7.2.9, `@mikro-orm/sql` 7.2.9, and their shared Kysely runtime. See [SQL.md](SQL.md) for ordinary driver configuration and engine boundaries.
+The public extension API described here requires **0.3.0 or newer**. It is unavailable in the immutable 0.2.0 release. The baseline is MikroORM 7.2.9, `@mikro-orm/sql` 7.2.9, and one shared Kysely 0.29.8 runtime. See [SQL.md](SQL.md) for installation, ordinary driver configuration, and engine boundaries.
 
 Extensions can supply a SQL platform and connection class, validate an additional column type, bind its values, and decode its wire representation while reusing the standard YQL compiler, schema helper, pooling, and transaction lifecycle. The default driver remains strict: Decimal columns, check constraints, partial indexes, and non-primary sequences are not enabled by adding these hooks.
 

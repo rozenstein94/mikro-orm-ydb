@@ -2,11 +2,11 @@
 
 Native YQL drivers for MikroORM and YDB, using the official JavaScript SDK's Table API.
 
-The **0.2.0 SQL implementation** adds `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It provides SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md) for setup, supported features, engine limitations and migration configuration. Version **0.1.1** is the earlier core-only driver; use **0.2.0** for the SQL implementation.
+Version **0.3.0** provides `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It includes SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](SQL.md) for setup, supported features, engine limitations and migration configuration.
 
-The **0.3.0 source candidate** adds public platform, connection, metadata, and exact-value codec extension points. It is not yet a registry release; see [EXTENDING.md](EXTENDING.md). The published 0.2.0 archive does not contain those hooks.
+The public platform, connection, metadata, and exact-value codec extension API requires **0.3.0 or newer**; see [EXTENDING.md](EXTENDING.md). Version 0.2.0 introduced the SQL driver and does not contain these extension hooks. Version 0.1.1 is the earlier core-only driver.
 
-`YdbDriver` retains the core `DatabaseDriver` API described below. Its supported feature set is narrower than `YdbSqlDriver`. Both use MikroORM's EntityManager, Unit of Work and Identity Map. The package targets **MikroORM `^7.2.9`** and **Node.js 22.17 or newer**; all MikroORM packages in an application must use matching versions. Tests pin 7.2.9 as the floor, and the packaged consumer checks the newest stable version in range. This is an independent community package. It uses native YDB, with no Document API or AWS DynamoDB compatibility claim.
+`YdbDriver` retains the core `DatabaseDriver` API described below. Its supported feature set is narrower than `YdbSqlDriver`. Both use MikroORM's EntityManager, Unit of Work and Identity Map. The package targets **MikroORM `^7.2.9`** and **Node.js 22.17 or newer**; all MikroORM packages in an application must use matching versions. Tests pin 7.2.9 as the floor, and the packaged consumer checks the newest stable version in range. This independent community package uses native YQL over the YDB gRPC Table API. It does not use PostgreSQL wire compatibility or Document API and makes no AWS DynamoDB compatibility claim.
 
 Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). Related upstream discussions: [#5770](https://github.com/mikro-orm/mikro-orm/discussions/5770) and [#8736](https://github.com/mikro-orm/mikro-orm/discussions/8736).
 
@@ -14,23 +14,21 @@ Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-y
 
 ```sh
 npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 \
-  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.2.0
+  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.3.0
 ```
 
 Import `YdbSqlDriver` and `YdbMigrator` from this package and follow [the SQL guide](SQL.md). Keep one shared Kysely runtime matching the installed `@mikro-orm/sql`; do not rely on an automatic peer selection that can install two Kysely versions.
 
 ## Core driver installation
 
-Install the [public npm package](https://www.npmjs.com/package/@rozenshtein94/mikro-orm-ydb) and a compatible MikroORM core:
+The same package and installation above also provide `YdbDriver`. Select that class for the narrower core API described below. Keep the matching SQL/migrations/Kysely peers installed because the package exports both drivers.
+
+## Build from source
+
+To build the package from `main`:
 
 ```sh
-npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb@0.1.1
-```
-
-Build the SQL implementation from its feature branch as described in [SQL.md](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md). To build the current source package:
-
-```sh
-git clone --branch feat/sql-driver-extensions https://github.com/rozenstein94/mikro-orm-ydb.git
+git clone --branch main https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
