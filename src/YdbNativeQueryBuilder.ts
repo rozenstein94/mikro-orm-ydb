@@ -47,6 +47,7 @@ import {
 export interface YdbQueryPlatform extends AbstractSqlPlatform {
   getColumnType(table: string, column: string): string | undefined;
   getPrimaryKeyColumns(table: string): string[];
+  createParameterValue?(value: unknown, declaration: string): Value;
 }
 
 const primitiveTypes = {
@@ -437,7 +438,13 @@ export class YdbNativeQueryBuilder extends NativeQueryBuilder {
       return type ? this.cast(expression, type) : expression;
     }
     if (value === undefined) value = null;
-    this.params.push(type ? typedValue(value, type) : fromJs(value as JSValue));
+    this.params.push(
+      type
+        ? this.#ydbPlatform.createParameterValue
+          ? this.#ydbPlatform.createParameterValue(value, type)
+          : typedValue(value, type)
+        : fromJs(value as JSValue),
+    );
     return type ? this.cast('?', type) : '?';
   }
 

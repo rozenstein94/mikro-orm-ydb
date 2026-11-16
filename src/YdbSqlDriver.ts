@@ -18,10 +18,19 @@ import { AbstractSqlDriver, Kysely as SqlKysely, type QBFilterQuery } from '@mik
 import { YdbSqlConnection } from './YdbSqlConnection.js';
 import { YdbSqlPlatform } from './YdbSqlPlatform.js';
 
+/** Components created for one ORM instance. `driverOptions` remains reserved for native SDK options. */
+export interface YdbSqlDriverComponents {
+  readonly platform?: YdbSqlPlatform;
+  readonly connection?: new (...args: ConstructorParameters<typeof YdbSqlConnection>) => YdbSqlConnection;
+}
+
 /** Native YDB implementation of the MikroORM v7 SQL driver contracts. */
 export class YdbSqlDriver extends AbstractSqlDriver<YdbSqlConnection, YdbSqlPlatform> {
-  constructor(config: Configuration) {
-    super(config, new YdbSqlPlatform(), YdbSqlConnection, ['@ydbjs/core', 'kysely']);
+  constructor(config: Configuration, components: YdbSqlDriverComponents = {}) {
+    super(config, components.platform ?? new YdbSqlPlatform(), components.connection ?? YdbSqlConnection, [
+      '@ydbjs/core',
+      'kysely',
+    ]);
     if (!Object.is(Kysely, SqlKysely))
       throw new Error(
         'YDB SQL requires one shared Kysely runtime with @mikro-orm/sql. Install the Kysely version used by @mikro-orm/sql and deduplicate the dependency tree.',
@@ -39,6 +48,7 @@ export class YdbSqlDriver extends AbstractSqlDriver<YdbSqlConnection, YdbSqlPlat
   }
   override setMetadata(metadata: MetadataStorage): void {
     super.setMetadata(metadata);
+    this.platform.setMetadata(metadata);
     const native = this.connection.getYdbConnection();
     native.setMetadata(metadata);
     native.setPlatform(this.platform);

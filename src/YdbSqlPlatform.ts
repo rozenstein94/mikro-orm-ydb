@@ -2,14 +2,16 @@ import {
   type Configuration,
   type EntityMetadata,
   type EntityProperty,
+  type MetadataStorage,
   ReferenceKind,
   RawQueryFragment,
 } from '@mikro-orm/core';
 import { AbstractSqlPlatform } from '@mikro-orm/sql';
 import { YdbExceptionConverter } from './YdbExceptionConverter.js';
 import { YdbPlatform } from './YdbPlatform.js';
-import { YdbNativeQueryBuilder } from './YdbNativeQueryBuilder.js';
+import { YdbNativeQueryBuilder, typedValue } from './YdbNativeQueryBuilder.js';
 import { YdbSchemaHelper } from './YdbSchemaHelper.js';
+import type { Value } from '@ydbjs/value';
 
 /** SQL ORM contracts with native YQL syntax and YDB schema semantics. */
 export class YdbSqlPlatform extends AbstractSqlPlatform {
@@ -17,6 +19,7 @@ export class YdbSqlPlatform extends AbstractSqlPlatform {
   protected override readonly schemaHelper = new YdbSchemaHelper(this);
   readonly #types = new YdbPlatform();
   readonly #tables = new Map<string, EntityMetadata>();
+  #metadata?: MetadataStorage;
 
   override setConfig(config: Configuration): void {
     // YDB has no foreign key constraints; the ORM still owns relation metadata and pivot tables.
@@ -137,8 +140,22 @@ export class YdbSqlPlatform extends AbstractSqlPlatform {
   override quoteDefaultValue(value: string): string {
     return this.escape(value);
   }
+  /** Attach the live discovered storage, including later `orm.discoverEntity()` changes. */
+  setMetadata(metadata: MetadataStorage): void {
+    this.#metadata = metadata;
+    this.#tables.clear();
+  }
+  /** Metadata owned by MikroORM; extensions must not mutate it after discovery. */
+  getTableMetadata(table: string): EntityMetadata | undefined {
+    const meta = this.#metadata ? this.#metadata.getByTableName(table) : this.#tables.get(table);
+    return meta?.root.discriminatorColumn ? meta.root : meta;
+  }
+  /** A bound SDK value for a validated column declaration; custom encodings stay parameterized. */
+  createParameterValue(value: unknown, declaration: string): Value {
+    return typedValue(value, declaration);
+  }
   getColumnType(table: string, column: string): string | undefined {
-    const meta = this.#tables.get(table);
+    const meta = this.getTableMetadata(table);
     const prop = meta?.props.find(p => p.fieldNames?.includes(column));
     const type = prop?.columnTypes?.[prop.fieldNames.indexOf(column)];
     const canonical = type && (/^serial$/i.test(type) ? 'Int32' : /^serial8$/i.test(type) ? 'Int64' : type);
@@ -146,8 +163,7 @@ export class YdbSqlPlatform extends AbstractSqlPlatform {
   }
   getPrimaryKeyColumns(table: string): string[] {
     return (
-      this.#tables
-        .get(table)
+      this.getTableMetadata(table)
         ?.getPrimaryProps()
         .flatMap(p => p.fieldNames) ?? []
     );
@@ -172,7 +188,7 @@ export class YdbSqlPlatform extends AbstractSqlPlatform {
     }
     this.#tables.set(meta.tableName, meta.root.discriminatorColumn ? meta.root : meta);
   }
-  private validateColumnType(prop: EntityProperty): void {
+  protected validateColumnType(prop: EntityProperty): void {
     for (const type of prop.columnTypes ?? []) {
       if (!/^(?:Utf8|String|Int32|Int64|Double|Bool|Timestamp|JsonDocument|Serial|Serial8)$/i.test(type)) {
         throw new Error(`YDB SQL driver does not support column type ${type} on ${prop.name}.`);

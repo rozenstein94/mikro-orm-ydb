@@ -21,6 +21,7 @@ import { Driver, type DriverOptions } from '@ydbjs/core';
 import { YDBError } from '@ydbjs/error';
 import { fromYdb, toJs, type Value } from '@ydbjs/value';
 import { typeToString } from '@ydbjs/value/print';
+import type { Value as YdbWireValue, Type as YdbWireType } from '@ydbjs/api/value';
 import { isYdbTableNotFound, YdbExceptionConverter } from './YdbExceptionConverter.js';
 
 /** Driver options are forwarded to the official SDK; credentials never enter query logs. */
@@ -242,7 +243,7 @@ export class YdbConnection extends Connection {
         if (!/^\$[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
           throw new Error('YDB parameter names must start with $ followed by an identifier.');
         }
-        declarations.push(`DECLARE ${name} AS ${typeToString(value.type)};`);
+        declarations.push(`DECLARE ${name} AS ${this.getParameterTypeDeclaration(value)};`);
         return [name, structuredClone({ type: value.type.encode(), value: value.encode() })];
       }),
     );
@@ -289,7 +290,7 @@ export class YdbConnection extends Connection {
                   if (!column.type || !row.items[index]) {
                     throw new Error('YDB returned a result without a column type or value.');
                   }
-                  return [column.name, toJs(fromYdb(row.items[index], column.type))];
+                  return [column.name, this.decodeResultValue(row.items[index], column.type)];
                 }),
               ),
             ) ?? []
@@ -321,6 +322,16 @@ export class YdbConnection extends Connection {
         }
       }
     });
+  }
+
+  /** YQL declaration for one SDK value. Custom codecs must retain exact type parameters. */
+  protected getParameterTypeDeclaration(value: Value): string {
+    return typeToString(value.type);
+  }
+
+  /** Decode one wire value. Custom types can extend the pinned SDK without replacing pooling or transactions. */
+  protected decodeResultValue(value: YdbWireValue, type: YdbWireType): unknown {
+    return toJs(fromYdb(value, type));
   }
 
   async executeScheme(sql: string, signal?: AbortSignal): Promise<void> {

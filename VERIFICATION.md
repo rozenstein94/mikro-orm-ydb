@@ -72,3 +72,20 @@ sha512-TTAiEOw0Vnpt2Bba1Wh8/x1aayjHnvPPDIddPbvI1IyzFFR6KdpSxY9daaU8XF8660dv30Frm
 ```
 
 [Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43858535575) passes build, formatting, lint/typecheck, all 207 tests and the packed-consumer checks. Later installation-documentation commits do not change the immutable 0.2.0 source tag or registry archive.
+
+## Public extension API source candidate (0.3.0)
+
+The source candidate adds optional `YdbSqlDriverComponents`, public registered-metadata lookup, a protected column-type validator, public schema helper/query builder/value-factory exports, and native parameter-declaration/result-decoding hooks. Published 0.2.0 remains unchanged and does not contain this API. Dependency versions and the strict default feature policy are unchanged.
+
+Validation against the pinned MikroORM 7.2.9 / shared Kysely 0.29.8 baseline:
+
+```sh
+npx --yes corepack yarn format
+npx --yes corepack yarn build
+npx --yes corepack yarn lint
+YDB_INTEGRATION=1 npx --yes corepack yarn test
+```
+
+All checks pass. The complete suite passes **235/235 tests in 16 files, with no skipped tests**. The 28 added cases cover public component composition, live metadata registration independent of a custom validator, renamed/composite/STI keys, native connection replacement, and a strict extension storing physical Decimal values through the original compiler and lifecycle. The Decimal fixture verifies exact signed Int128 encoding, null handling, schema introspection/diff/application, Unit of Work and Identity Map, batch operations, filters/order/pagination and rollback against actual local YDB. It does not enable Decimal in the default driver.
+
+`orm.discoverEntity()` requires an explicit platform validation step before dynamic schema operations or writes, as documented in [EXTENDING.md](EXTENDING.md). Migration lock/error policy is unchanged. This source-candidate evidence does not claim npm publication, Node-matrix CI completion, cloud authentication or compatibility with MikroORM 6.6.14.

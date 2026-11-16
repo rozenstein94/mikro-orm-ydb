@@ -2,7 +2,7 @@
 
 `YdbSqlDriver` integrates native YQL with MikroORM's **v7 SQL driver contracts**. It extends `AbstractSqlDriver` from `@mikro-orm/sql`, with a YDB Kysely dialect, YQL query compiler, native SQL builder, schema helper, and SQL migrator integration. Non-recursive CTEs are compiled to YQL named subqueries. EntityManager, SQL QueryBuilder, relation loading, repositories, Unit of Work, and Identity Map use MikroORM's SQL implementation.
 
-This document describes the SQL implementation in **0.2.0**. Version **0.1.1** is the earlier core-only driver and does not supply this SQL API. See [VERIFICATION.md](VERIFICATION.md) for the exact tested versions, commands and evidence boundaries.
+This document describes the SQL implementation in **0.2.0**. Version **0.1.1** is the earlier core-only driver and does not supply this SQL API. The **0.3.0 source candidate** additionally provides the public extension API documented in [EXTENDING.md](EXTENDING.md); those hooks are absent from published 0.2.0. See [VERIFICATION.md](VERIFICATION.md) for the exact tested versions, commands and evidence boundaries.
 
 The implementation targets MikroORM **7.2.9** and Kysely **0.29.8**. Keep the MikroORM packages in an application on matching versions. The package's `^7.2.9` peer ranges describe compatible v7 candidates; the pinned versions in this checkout are the concrete development baseline. This is a native YDB integration, with no Document API or AWS DynamoDB compatibility claim.
 
@@ -35,7 +35,7 @@ npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2
 
 Kysely is a peer dependency. Use the exact Kysely version required by the installed `@mikro-orm/sql` package and deduplicate the tree: MikroORM 7.2.9 uses 0.29.8. The driver rejects a second, different Kysely runtime, which would break nominal TypeScript contracts and transaction-abort handling. Check the application's actual dependency graph with `npm ls @mikro-orm/core @mikro-orm/sql @mikro-orm/migrations kysely`; do not combine a newer SQL package with an older root Kysely copy.
 
-Use Node.js 22.17 or newer and ESM. The source archive's manifest version is 0.2.0; record the SQL source commit alongside the built artifact. A filename containing `sql` does not change its package version or publish it to npm. Pin the final release and commit the application lockfile when deploying.
+Use Node.js 22.17 or newer and ESM. The current source candidate's manifest version is 0.3.0, which does not imply registry publication; record the SQL source commit alongside the built artifact. A filename containing `sql` does not change its package version or publish it to npm. Pin the final release and commit the application lockfile when deploying.
 
 ## Configure entities and the SQL driver
 

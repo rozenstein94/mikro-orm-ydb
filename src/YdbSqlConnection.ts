@@ -17,8 +17,17 @@ import { YdbDialect } from './YdbDialect.js';
 /** Retains typed parameter binding instead of interpolating SQL before calling Kysely. */
 export class YdbSqlConnection extends AbstractSqlConnection {
   #native?: YdbConnection;
+  /** Create an owned native transport while preserving the SQL connection's cache and close lifecycle. */
+  protected createNativeConnection(): YdbConnection {
+    return new YdbConnection(this.config, this.options, this.type);
+  }
   getYdbConnection(): YdbConnection {
-    this.#native ??= new YdbConnection(this.config, this.options, this.type);
+    if (!this.#native) {
+      const native = this.createNativeConnection();
+      native.setPlatform(this.platform);
+      if (this.metadata) native.setMetadata(this.metadata);
+      this.#native = native;
+    }
     return this.#native;
   }
   override createKysely(): void | Promise<void> {

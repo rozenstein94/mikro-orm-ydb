@@ -4,6 +4,8 @@ Native YQL drivers for MikroORM and YDB, using the official JavaScript SDK's Tab
 
 The **0.2.0 SQL implementation** adds `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It provides SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md) for setup, supported features, engine limitations and migration configuration. Version **0.1.1** is the earlier core-only driver; use **0.2.0** for the SQL implementation.
 
+The **0.3.0 source candidate** adds public platform, connection, metadata, and exact-value codec extension points. It is not yet a registry release; see [EXTENDING.md](EXTENDING.md). The published 0.2.0 archive does not contain those hooks.
+
 `YdbDriver` retains the core `DatabaseDriver` API described below. Its supported feature set is narrower than `YdbSqlDriver`. Both use MikroORM's EntityManager, Unit of Work and Identity Map. The package targets **MikroORM `^7.2.9`** and **Node.js 22.17 or newer**; all MikroORM packages in an application must use matching versions. Tests pin 7.2.9 as the floor, and the packaged consumer checks the newest stable version in range. This is an independent community package. It uses native YDB, with no Document API or AWS DynamoDB compatibility claim.
 
 Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). Related upstream discussions: [#5770](https://github.com/mikro-orm/mikro-orm/discussions/5770) and [#8736](https://github.com/mikro-orm/mikro-orm/discussions/8736).
@@ -32,14 +34,14 @@ git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
-npx --yes corepack yarn pack --out mikro-orm-ydb-0.2.0.tgz
+npx --yes corepack yarn pack --out mikro-orm-ydb-0.3.0.tgz
 ```
 
 From the consuming application's directory, install the packed artifact and a compatible MikroORM peer:
 
 ```sh
 npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 kysely@0.29.8 \
-  /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.2.0.tgz
+  /absolute/path/to/mikro-orm-ydb/mikro-orm-ydb-0.3.0.tgz
 ```
 
 The package exports ESM and TypeScript declarations. Its `prepack` hook builds `dist/` before creating an archive. Commit the resulting application lockfile when building deployment artifacts.
