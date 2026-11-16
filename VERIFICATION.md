@@ -59,3 +59,16 @@ Both smoke checks pass. The SQL check covers the compiled package exports, actua
 The source also builds, passes lint/typecheck and passes **207/207** tests against physical copies of the built upstream core/SQL/migrations from `d8a2ba8a13c5d16eab947f26580031f403c50087` (the runtime code is unchanged through the documentation PR head `729083904d52e222f181d043f6acd498989a00c0`). That upstream SQL build requires **Kysely 0.29.9**, so this separate canary explicitly aligns its Kysely resolution to 0.29.9. It is not a claim that the two Kysely versions can coexist: mixing root 0.29.8 with SQL's nested 0.29.9 fails TypeScript nominal contracts. Kysely is therefore a peer, and the SQL driver rejects mismatched runtime identities before connecting. The clean consumer and CI explicitly install the version required by their actual SQL package and deduplicate the tree.
 
 MikroORM **6.6.14 is not supported** by this release; its separate SQL/core backport is tracked in [issue #1](https://github.com/rozenstein94/mikro-orm-ydb/issues/1). Live Yandex Cloud IAM/TLS, suspended Serverless cold starts, quotas and cloud failover remain outside this local evidence. Engine limitations and nontransactional DDL recovery are documented in `SQL.md`.
+
+
+### npm registry verification
+
+Version **0.2.0** is published as the npm `latest` release. A new consumer installed it directly from the registry with MikroORM core/SQL/migrations 7.2.9 and Kysely 0.29.8. The lockfile resolves the driver to `https://registry.npmjs.org/@rozenshtein94/mikro-orm-ydb/-/mikro-orm-ydb-0.2.0.tgz`; `npm ls` shows one shared core and Kysely. Both `smoke.mjs` and `sql-smoke.mjs` pass against actual local YDB.
+
+The release source is `615d5ea3d84ead938bd563961ba86b15063c1c26` (tag `v0.2.0`). The registry integrity exactly matches the validated GitHub release archive:
+
+```text
+sha512-TTAiEOw0Vnpt2Bba1Wh8/x1aayjHnvPPDIddPbvI1IyzFFR6KdpSxY9daaU8XF8660dv30FrmR2SdSwM6WY7lQ==
+```
+
+[Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43858535575) passes build, formatting, lint/typecheck, all 207 tests and the packed-consumer checks. Later installation-documentation commits do not change the immutable 0.2.0 source tag or registry archive.

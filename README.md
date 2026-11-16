@@ -2,11 +2,20 @@
 
 Native YQL drivers for MikroORM and YDB, using the official JavaScript SDK's Table API.
 
-The **0.2.0 SQL implementation** adds `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It provides SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](https://github.com/rozenstein94/mikro-orm-ydb/blob/v0.2.0/SQL.md) for setup, supported features, engine limitations and migration configuration. Version **0.1.1** is the earlier core-only driver; use **0.2.0** for the SQL implementation.
+The **0.2.0 SQL implementation** adds `YdbSqlDriver` on `@mikro-orm/sql` and a YDB Kysely dialect. It provides SQL QueryBuilder, joined loading, 1:1 and M:N relations, the standard SQL schema generator with a YDB schema helper, and `YdbMigrator` integration. Read [the SQL driver guide](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md) for setup, supported features, engine limitations and migration configuration. Version **0.1.1** is the earlier core-only driver; use **0.2.0** for the SQL implementation.
 
 `YdbDriver` retains the core `DatabaseDriver` API described below. Its supported feature set is narrower than `YdbSqlDriver`. Both use MikroORM's EntityManager, Unit of Work and Identity Map. The package targets **MikroORM `^7.2.9`** and **Node.js 22.17 or newer**; all MikroORM packages in an application must use matching versions. Tests pin 7.2.9 as the floor, and the packaged consumer checks the newest stable version in range. This is an independent community package. It uses native YDB, with no Document API or AWS DynamoDB compatibility claim.
 
 Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-ydb). Related upstream discussions: [#5770](https://github.com/mikro-orm/mikro-orm/discussions/5770) and [#8736](https://github.com/mikro-orm/mikro-orm/discussions/8736).
+
+## Install the SQL driver
+
+```sh
+npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 \
+  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.2.0
+```
+
+Import `YdbSqlDriver` and `YdbMigrator` from this package and follow [the SQL guide](SQL.md). Keep one shared Kysely runtime matching the installed `@mikro-orm/sql`; do not rely on an automatic peer selection that can install two Kysely versions.
 
 ## Core driver installation
 
@@ -16,7 +25,7 @@ Install the [public npm package](https://www.npmjs.com/package/@rozenshtein94/mi
 npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb@0.1.1
 ```
 
-Build the SQL implementation from its feature branch as described in [SQL.md](https://github.com/rozenstein94/mikro-orm-ydb/blob/v0.2.0/SQL.md). To build the current source package:
+Build the SQL implementation from its feature branch as described in [SQL.md](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md). To build the current source package:
 
 ```sh
 git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-ydb.git

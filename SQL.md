@@ -6,7 +6,17 @@ This document describes the SQL implementation in **0.2.0**. Version **0.1.1** i
 
 The implementation targets MikroORM **7.2.9** and Kysely **0.29.8**. Keep the MikroORM packages in an application on matching versions. The package's `^7.2.9` peer ranges describe compatible v7 candidates; the pinned versions in this checkout are the concrete development baseline. This is a native YDB integration, with no Document API or AWS DynamoDB compatibility claim.
 
-## Build the SQL implementation
+## Install the published SQL driver
+
+```sh
+npm install @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 \
+  kysely@0.29.8 @rozenshtein94/mikro-orm-ydb@0.2.0
+npm ls @mikro-orm/core @mikro-orm/sql @mikro-orm/migrations kysely --all
+```
+
+Version 0.2.0 is published on [npm](https://www.npmjs.com/package/@rozenshtein94/mikro-orm-ydb). Use a single shared Kysely runtime matching the installed SQL package. An unpinned automatic peer installation can produce mismatched Kysely copies even when all individual ranges appear satisfied; the explicit versions above are the verified published baseline.
+
+## Build from source
 
 ```sh
 git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-ydb.git
