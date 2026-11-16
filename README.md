@@ -8,10 +8,10 @@ Source: [rozenstein94/mikro-orm-ydb](https://github.com/rozenstein94/mikro-orm-y
 
 ## Install
 
-Version 0.1.1 is prepared for public npm publication. Once it is available in the registry, install the package and a compatible MikroORM core:
+Install the [public npm package](https://www.npmjs.com/package/@rozenshtein94/mikro-orm-ydb) and a compatible MikroORM core:
 
 ```sh
-npm install '@mikro-orm/core@^7.2.9' @rozenstein/mikro-orm-ydb
+npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb
 ```
 
 The repository also supports building a package from source:
@@ -39,7 +39,7 @@ The local example needs no credentials. It connects to an existing database; it 
 ```ts
 import { randomUUID } from 'node:crypto';
 import { EntitySchema, MikroORM } from '@mikro-orm/core';
-import { YdbDriver } from '@rozenstein/mikro-orm-ydb';
+import { YdbDriver } from '@rozenshtein94/mikro-orm-ydb';
 
 class Note {
   id!: string;

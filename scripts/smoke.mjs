@@ -1,7 +1,7 @@
 // Run this file from a consumer after installing the built release archive.
 import assert from 'node:assert/strict';
 import { EntitySchema, MikroORM } from '@mikro-orm/core';
-import { YdbDriver } from '@rozenstein/mikro-orm-ydb';
+import { YdbDriver } from '@rozenshtein94/mikro-orm-ydb';
 
 const Note = new EntitySchema({
   name: 'PackedNote',

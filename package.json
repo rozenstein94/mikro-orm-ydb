@@ -1,5 +1,5 @@
 {
-  "name": "@rozenstein/mikro-orm-ydb",
+  "name": "@rozenshtein94/mikro-orm-ydb",
   "version": "0.1.1",
   "description": "Native YQL driver for MikroORM and YDB",
   "type": "module",
