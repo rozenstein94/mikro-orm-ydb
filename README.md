@@ -328,7 +328,7 @@ Current MikroORM v7 SQL packages use Kysely; v6.6.14 used `@mikro-orm/knex`. Thi
 
 See [VERIFICATION.md](VERIFICATION.md) for the recorded validation and its boundaries.
 
-Medusa v2.18.0's use of MikroORM 6.6.14 does not make this package a Medusa database integration. PostgreSQL/Knex queries, migrations, services, indexes, constraints, and application assumptions need a separate audit and port. This repository does not install or run Medusa and does not modify a Veles application.
+Applications pinned to MikroORM 6.6.14 require a separately tested backport. PostgreSQL/Knex-specific queries, migrations, services, indexes, constraints, and application assumptions need a separate audit and port.
 
 Unsupported features include SQL QueryBuilder, SQL migrations/entity generation, secondary/unique indexes, one-to-one and many-to-many relations, embedded or polymorphic entities, inheritance/views, version properties, generated columns, raw SQL expressions/defaults, autoincrement, SQL schemas, read replicas configured through MikroORM, and database provisioning. These are driver boundaries, not a claim that YDB itself lacks every listed feature.
 
