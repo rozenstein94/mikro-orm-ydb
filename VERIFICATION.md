@@ -1,5 +1,27 @@
 # Verification record
 
+## Unreleased correctness patch
+
+The source patch branch contains correctness work that is separate from the immutable `v0.3.0` tag and npm tarball. The release and registry checks below establish the published artifact's behavior; they do not imply that these later fixes are available from `@rozenshtein94/mikro-orm-ydb@0.3.0`.
+
+The new regression fixtures cover joined default nullable soft-delete filters and parameterized target filters, comparing joined and select-in loading while retaining parents with no visible children. They also exercise partial projections ordered by omitted values, with shuffled primary keys and sort values, repeated reads, pagination, and subquery projection arity. The implementations act on structured MikroORM join state or Kysely operation nodes before SQL rendering; raw application SQL is not parsed and rewritten.
+
+Only qualified predicates local to a physical `INNER`/`LEFT JOIN` target can be pushed into its filtered source. Unsupported raw, subquery, cross-source, and filtered `RIGHT`/`FULL` predicates are rejected rather than moved to an outer `WHERE`. The local scenarios use owned, uniquely named tables on an existing YDB instance; they do not establish cloud-only behavior or a new registry release.
+
+The complete source suite passed **313/313 tests in 23 files, with no skipped tests**, against actual local YDB, using published MikroORM core/SQL/migrations **7.2.9** and one **Kysely 0.29.8** runtime. This includes nullable Date/UoW, shared-FK root/joined/dotted select-in projections, 11 filtered-join integration scenarios, 20 Kysely AST checks, 16 ORM composition checks, and 12 ordered-projection checks. The Decimal ordering fixture uses an explicit test extension and lossless Int128 decoding; it does not enable Decimal in the default platform.
+
+The following checks passed:
+
+```sh
+npx --yes corepack yarn format:check
+npx --yes corepack yarn build
+./node_modules/.bin/tsc --noEmit -p tsconfig.json
+npx --yes corepack yarn lint
+YDB_INTEGRATION=1 YDB_ENDPOINT=grpc://127.0.0.1:2136 YDB_DATABASE=/local npx --yes corepack yarn test
+```
+
+Eagerly embedding a filtered ORM QueryBuilder or its native/raw form is explicitly rejected before execution; ordinary unfiltered subqueries remain supported. Internal pagination/count clones share declarations with their owning statement. The late STI discriminator fixture creates entities through the Unit of Work; it does not prove native subclass `insertMany` without an explicit discriminator.
+
 ## 0.3.0 release and registry verification
 
 Version **0.3.0** is published as npm `latest`. The immutable release source is commit `c7ec4a8deec56bca8d74ff87efdb87a9d868fa3d`, tagged `v0.3.0`. It uses published MikroORM core/SQL/migrations **7.2.9** and one shared **Kysely 0.29.8** runtime. The [release-source Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43871465441) is green: every matrix job passes formatting, build, lint/typecheck, **237/237 tests in 16 files with no skipped tests**, and the three packed-consumer smoke checks against actual local YDB.

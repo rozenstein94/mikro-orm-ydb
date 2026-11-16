@@ -57,7 +57,8 @@ export class YdbSqlPlatform extends AbstractSqlPlatform {
   override convertsJsonAutomatically(): boolean {
     return true;
   }
-  override processDateProperty(value: unknown): Date {
+  override processDateProperty(value: unknown): string | number | Date {
+    if (value == null) return super.processDateProperty(value);
     return value instanceof Date ? value : new Date(value as string);
   }
   override normalizeColumnType(type: string): string {

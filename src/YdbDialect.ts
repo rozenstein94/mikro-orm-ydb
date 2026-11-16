@@ -28,6 +28,7 @@ import {
 } from 'kysely';
 import { compileYdbBindings } from './YdbBindings.js';
 import { type YdbConnection, type YdbTransaction } from './YdbConnection.js';
+import { YdbJoinTransformer } from './YdbJoinTransformer.js';
 
 /** Allows the MikroORM SQL connection to preserve its richer binding and result context. */
 export type YdbQueryExecutor = (
@@ -50,7 +51,8 @@ export class YdbQueryCompiler extends DefaultQueryCompiler {
   override compileQuery(...args: Parameters<DefaultQueryCompiler['compileQuery']>): CompiledQuery {
     this.#namedQueries.clear();
     try {
-      return super.compileQuery(...args);
+      const [node, queryId] = args;
+      return super.compileQuery(new YdbJoinTransformer().transformNode(node, queryId), queryId);
     } finally {
       this.#namedQueries.clear();
     }

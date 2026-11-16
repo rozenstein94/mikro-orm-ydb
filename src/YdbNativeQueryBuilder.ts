@@ -79,10 +79,25 @@ const primitiveTypes = {
 export class YdbNativeQueryBuilder extends NativeQueryBuilder {
   readonly #ydbPlatform: YdbQueryPlatform;
   #table?: string;
+  readonly #externalNamedQueries = new Set<string>();
 
   constructor(platform: YdbQueryPlatform) {
     super(platform);
     this.#ydbPlatform = platform;
+  }
+
+  /** @internal A filtered relation uses the same platform and bound-value rules as its statement. */
+  createSibling(): YdbNativeQueryBuilder {
+    const sibling = this.#ydbPlatform.createNativeQueryBuilder();
+    if (!(sibling instanceof YdbNativeQueryBuilder)) {
+      throw new Error('YDB filtered relations require a native YQL query builder.');
+    }
+    return sibling;
+  }
+
+  /** @internal Declarations are hoisted to the owning statement when core compiles pagination clones. */
+  registerExternalNamedQueries(names: Iterable<string>): void {
+    for (const name of names) this.#externalNamedQueries.add(name);
   }
 
   override from(table: string | RawQueryFragment | NativeQueryBuilder, options?: TableOptions): this {
@@ -164,7 +179,15 @@ export class YdbNativeQueryBuilder extends NativeQueryBuilder {
       this.parts.push('limit 18446744073709551615ul');
     }
     if (this.options.offset != null) this.parts.push(`offset ${this.pagination(this.options.offset)}`);
-    if (order.extra.length) this.parts.push(') as `__ydb_ordered`');
+    if (order.extra.length) {
+      // Ordering a table subquery only defines LIMIT/OFFSET membership. Repeat the order
+      // outside WITHOUT, referring to removed sort columns through the source alias.
+      const hidden = new Set(order.extra.map(item => item.alias));
+      const outerOrder = this.rewriteIdentifiers(order.sql, (source, parts) =>
+        parts.length === 1 && hidden.has(parts[0]) ? `${this.quote('__ydb_ordered')}.${this.quote(parts[0])}` : source,
+      );
+      this.parts.push(`) as ${this.quote('__ydb_ordered')} order by ${outerOrder}`);
+    }
   }
 
   private projection(countSubquery: boolean): { sql: string; names: Map<string, string>; wildcard: Set<string> } {
@@ -341,8 +364,8 @@ export class YdbNativeQueryBuilder extends NativeQueryBuilder {
   }
 
   protected override compileCtes(): void {
-    const defined = new Set<string>();
-    const names = new Set(this.options.ctes?.map(cte => cte.name));
+    const defined = new Set(this.#externalNamedQueries);
+    const names = new Set([...this.#externalNamedQueries, ...(this.options.ctes?.map(cte => cte.name) ?? [])]);
     for (const cte of this.options.ctes ?? []) {
       if (cte.recursive || cte.columns?.length || cte.materialized != null) {
         throw new Error('YDB named subqueries do not support recursive, column-list or materialized CTE options');
@@ -356,7 +379,7 @@ export class YdbNativeQueryBuilder extends NativeQueryBuilder {
 
   protected override combineParts(): { sql: string; params: unknown[] } {
     const compiled = super.combineParts();
-    const names = new Set(this.options.ctes?.map(cte => cte.name));
+    const names = new Set([...this.#externalNamedQueries, ...(this.options.ctes?.map(cte => cte.name) ?? [])]);
     return names.size ? { sql: this.namedSources(compiled.sql, names, names), params: compiled.params } : compiled;
   }
 
