@@ -36,6 +36,8 @@ jobs:
           node "$RUNNER_TEMP/consumer/smoke.mjs"
           cp scripts/sql-smoke.mjs "$RUNNER_TEMP/consumer/sql-smoke.mjs"
           node "$RUNNER_TEMP/consumer/sql-smoke.mjs"
+          cp scripts/extensions-smoke.mjs "$RUNNER_TEMP/consumer/extensions-smoke.mjs"
+          (cd "$RUNNER_TEMP/consumer" && node extensions-smoke.mjs)
       - if: failure()
         run: docker compose -p mikro-ydb-ci logs --tail=150
       - if: always()

@@ -19,7 +19,7 @@ Version 0.2.0 is published on [npm](https://www.npmjs.com/package/@rozenshtein94
 ## Build from source
 
 ```sh
-git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-ydb.git
+git clone --branch feat/sql-driver-extensions https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build

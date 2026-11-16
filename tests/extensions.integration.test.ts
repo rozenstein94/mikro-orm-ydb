@@ -212,6 +212,7 @@ class DecimalRecord {
   id!: string;
   amount!: string;
   adjustment?: string | null;
+  fineAmount?: string | null;
   rebate?: string | null;
 }
 
@@ -223,6 +224,7 @@ function schema(withRebate = false) {
       id: { type: 'string', primary: true, fieldName: 'record_key' },
       amount: { type: new ExactDecimalType(), fieldName: 'total_amount' },
       adjustment: { type: new ExactDecimalType(), nullable: true, fieldName: 'optional_adjustment' },
+      fineAmount: { type: new ExactDecimalType(35, 18), nullable: true, fieldName: 'fine_amount' },
       rebate: { type: new ExactDecimalType(22, 9), nullable: true, fieldName: 'rebate_amount', persist: withRebate },
     },
   });
@@ -242,6 +244,8 @@ async function initialize(withRebate = false) {
 
 const exact = '90071992547409931234567890.123456789';
 const adjacent = '90071992547409931234567890.123456790';
+const exact18 = '90071992547409931.123456789012345678';
+const adjacent18 = '90071992547409931.123456789012345679';
 
 describe('consumer-owned exact Decimal codec', () => {
   test.each([exact, adjacent, `-${exact}`, '0.000000001', '-0.000000001', '0.000000000'])(
@@ -261,6 +265,21 @@ describe('consumer-owned exact Decimal codec', () => {
       expect(() => new ExactDecimalValue(value)).toThrow(/Decimal/);
     }
     expect(() => new ExactDecimalValue(0.1 as unknown as string)).toThrow(/decimal string/);
+  });
+
+  test('preserves the Decimal(35,18) minimum unit and finite bounds', () => {
+    for (const value of [
+      '0.000000000000000001',
+      '-0.000000000000000001',
+      '99999999999999999.999999999999999999',
+      '-99999999999999999.999999999999999999',
+    ]) {
+      const decimal = new ExactDecimalValue(value, 35, 18);
+      expect(ExactDecimalValue.decode(decimal.encode(), 35, 18).toString()).toBe(value);
+    }
+    expect(new ExactDecimalValue(adjacent18, 35, 18).scaled - new ExactDecimalValue(exact18, 35, 18).scaled).toBe(1n);
+    expect(() => new ExactDecimalValue('100000000000000000.000000000000000000', 35, 18)).toThrow(/precision 35/);
+    expect(() => new ExactDecimalValue('0.0000000000000000001', 35, 18)).toThrow(/without rounding/);
   });
 });
 
@@ -365,6 +384,41 @@ describe.skipIf(!enabled)('public SQL extensions with physical YDB Decimal', () 
     expect(equal.map(row => row.id)).toEqual(['huge']);
     const ordered = await orm.em.find(DecimalRecord, {}, { orderBy: { amount: 'asc' }, limit: 3, offset: 1 });
     expect(ordered.map(row => row.id)).toEqual(['two', 'ten', 'huge']);
+  });
+
+  test('retains all 18 fractional digits through schema, managed and batch writes, filters and updates', async () => {
+    const platform = orm.driver.getPlatform();
+    expect(platform.getColumnType(tableName, 'fine_amount')).toBe('Decimal(35,18)?');
+    const native = orm.driver.getConnection().getYdbConnection() as DecimalNativeConnection;
+    const description = await native.describeTable(tableName);
+    const declared = description?.columns.find(column => column.name === 'fine_amount')?.type;
+    const physical = declared?.type.case === 'optionalType' ? declared.type.value.item : declared;
+    expect(physical?.type).toMatchObject({ case: 'decimalType', value: { precision: 35, scale: 18 } });
+    expect(await orm.schema.getUpdateSchemaSQL()).toBe('');
+
+    orm.em.create(DecimalRecord, { id: 'scale18-managed', amount: exact, fineAmount: exact18 });
+    await orm.em.flush();
+    await orm.driver.nativeInsertMany(DecimalRecord, [
+      { id: 'scale18-adjacent', amount: exact, fineAmount: adjacent18 },
+      { id: 'scale18-negative', amount: exact, fineAmount: `-${exact18}` },
+    ]);
+    orm.em.clear();
+    const loaded = await orm.em.findOneOrFail(DecimalRecord, 'scale18-managed');
+    expect(loaded.fineAmount).toBe(exact18);
+    expect((await orm.em.findOneOrFail(DecimalRecord, 'scale18-adjacent')).fineAmount).toBe(adjacent18);
+    expect((await orm.em.findOneOrFail(DecimalRecord, 'scale18-negative')).fineAmount).toBe(`-${exact18}`);
+    const greater = await orm.em.find(DecimalRecord, { fineAmount: { $gt: exact18 } });
+    expect(greater.map(row => row.id)).toEqual(['scale18-adjacent']);
+    const ordered = await orm.em.find(DecimalRecord, {}, { orderBy: { fineAmount: 'asc' } });
+    expect(ordered.map(row => row.id)).toEqual(['scale18-negative', 'scale18-managed', 'scale18-adjacent']);
+
+    loaded.fineAmount = adjacent18;
+    await orm.em.flush();
+    orm.em.clear();
+    expect((await orm.em.findOneOrFail(DecimalRecord, 'scale18-managed')).fineAmount).toBe(adjacent18);
+    expect(native.decimalDeclarations).toContain('Decimal(35,18)');
+    expect(native.decimalDeclarations).toContain('Optional<Decimal(35,18)>');
+    expect(await orm.schema.getUpdateSchemaSQL()).toBe('');
   });
 
   test('rolls back exact writes with the inherited connection and transaction lifecycle', async () => {

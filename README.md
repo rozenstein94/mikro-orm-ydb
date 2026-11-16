@@ -30,7 +30,7 @@ npm install '@mikro-orm/core@^7.2.9' @rozenshtein94/mikro-orm-ydb@0.1.1
 Build the SQL implementation from its feature branch as described in [SQL.md](https://github.com/rozenstein94/mikro-orm-ydb/blob/main/SQL.md). To build the current source package:
 
 ```sh
-git clone --branch feat/sql-driver-v7 https://github.com/rozenstein94/mikro-orm-ydb.git
+git clone --branch feat/sql-driver-extensions https://github.com/rozenstein94/mikro-orm-ydb.git
 cd mikro-orm-ydb
 npx --yes corepack yarn install --immutable
 npx --yes corepack yarn build
