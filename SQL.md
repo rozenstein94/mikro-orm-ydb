@@ -142,6 +142,20 @@ The YQL builder handles joins, subqueries, grouped aggregates/HAVING, pagination
 
 Raw SQL uses YQL semantics. `connection.execute(sql, params)` accepts positional value bindings and `??` identifier bindings; it does not translate arbitrary PostgreSQL or MySQL SQL. A raw `null` parameter needs an explicitly typed SDK `Optional` value. Entity metadata lets generated mutations bind nullable and scalar values with their declared YDB types. SQL raw fragments are trusted application code and must not be built by concatenating request data.
 
+### Unreleased query correctness fixes
+
+The following fixes are on the source patch branch and are **not included in the immutable npm 0.3.0 release**. See [VERIFICATION.md](VERIFICATION.md#unreleased-correctness-patch) for the separate validation record before using a source-built artifact.
+
+Nullable Date values remain nullish in Unit of Work snapshots instead of becoming the Unix epoch. A stored `mapToPk` foreign key and a virtual owning relation can share one physical column without duplicate output aliases. Selecting both the stored key and a dotted relation field preserves the target field restriction and selects that root key once.
+
+YDB requires equijoin predicates in `JOIN ON`. The patch compiles structured predicates that refer only to an `INNER` or `LEFT JOIN` target into a filtered relation before joining it. For example, a joined child filter `{ deletedAt: null }` filters the child source while the `ON` clause retains the parent/child key equality. A left join therefore keeps parents with no matching children, including parents whose children are all filtered out. Filter values remain bound parameters; moving these predicates to the outer `WHERE` would change that behavior.
+
+Filtered joins require mapped physical targets and qualified target-local predicates. Raw or subquery predicates, cross-alias filters, mixed-source `OR` conditions, filtered `RIGHT`/`FULL` joins, and other unsupported expression forms raise errors before database execution. Raw `connection.execute()` SQL remains the application's YQL and is not rewritten by this mechanism.
+
+Core eagerly renders user-supplied ORM subqueries before their owning statement is compiled. Embedding a filtered ORM QueryBuilder (or its native/raw form) in a user CTE, predicate, projection, `FROM`, or join therefore raises an explicit error; execute that query separately or compose a structured Kysely query. Ordinary unfiltered ORM subqueries remain supported. The driver's internal pagination/count clones share declarations with their owning statement.
+
+When a partial projection omits an `ORDER BY` expression, the native builder selects a private sort column inside a subquery and removes it from the public projection with `WITHOUT`. The patch also orders the outer result explicitly: the inner `ORDER BY` and `LIMIT` determine page membership, and the outer `ORDER BY` determines the returned sequence. Hidden sort columns do not become entity fields or extra columns in a one-column `IN` subquery. This follows [YDB's table-expression semantics](https://ydb.tech/docs/en/yql/reference/syntax/expressions#table-expressions), which do not preserve a subquery's order in its surrounding table context. Include a unique tie-breaker in application ordering when equal sort values must have a deterministic order.
+
 ### Relations, keys, and types
 
 The SQL implementation provides many-to-one, inverse one-to-many, owning/inverse one-to-one, and many-to-many pivot tables through MikroORM's SQL relation machinery. Both joined and select-in loading are exercised by the live suite. SQL entity scenarios also cover composite-key relations, custom type conversion, integer version properties/optimistic locking, and single-table inheritance.

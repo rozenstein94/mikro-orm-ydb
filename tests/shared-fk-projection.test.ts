@@ -15,6 +15,7 @@ const prefix = `shared_fk_${process.pid}_${Date.now().toString(36)}`;
 class ProjectionOwner {
   id!: string;
   name!: string;
+  details!: string;
   children = new Collection<ProjectionChild>(this);
 }
 
@@ -35,6 +36,7 @@ const ownerSchema = new EntitySchema<ProjectionOwner>({
   properties: {
     id: { type: 'string', primary: true },
     name: { type: 'string' },
+    details: { type: 'string' },
     children: { kind: '1:m', entity: () => ProjectionChild, mappedBy: 'owner' },
   },
 });
@@ -134,14 +136,18 @@ function physicalColumns(meta: EntityMetadata): string[] {
   ];
 }
 
-function expectUniqueOutputColumns(sql: string, root: EntityMetadata): void {
-  const output = selectProjection(sql).flatMap(field => {
+function outputColumns(sql: string, root: EntityMetadata): string[] {
+  return selectProjection(sql).flatMap(field => {
     if (field === '*' || /^`(?:``|[^`])+`\.\*$/.test(field)) return physicalColumns(root);
     const alias = /\bas\s+`((?:``|[^`])+)`$/i.exec(field);
     if (alias) return [alias[1].replaceAll('``', '`')];
     const column = /`((?:``|[^`])+)`$/.exec(field);
     return column ? [column[1].replaceAll('``', '`')] : [field];
   });
+}
+
+function expectUniqueOutputColumns(sql: string, root: EntityMetadata): void {
+  const output = outputColumns(sql, root);
   expect(output.length, sql).toBeGreaterThan(0);
   expect(new Set(output).size, sql).toBe(output.length);
 }
@@ -179,8 +185,8 @@ describe.skipIf(!enabled)('shared stored FK and virtual relation projections', (
   beforeEach(async () => {
     await orm.schema.clear({ truncate: false });
     await orm.em.insertMany(ProjectionOwner, [
-      { id: 'owner-a', name: 'Alpha' },
-      { id: 'owner-b', name: 'Beta' },
+      { id: 'owner-a', name: 'Alpha', details: 'Unrequested Alpha details' },
+      { id: 'owner-b', name: 'Beta', details: 'Unrequested Beta details' },
     ]);
     await orm.em.insertMany(ProjectionChild, [
       { id: 'child-a', label: 'Owned', lazyLabel: 'Lazy owned', ownerId: 'owner-a', fallbackOwnerId: 'owner-b' },
@@ -365,6 +371,34 @@ describe.skipIf(!enabled)('shared stored FK and virtual relation projections', (
     const owner = await orm.em.findOneOrFail(ProjectionOwner, 'owner-a');
     expect(children[0].owner).toBe(owner);
     expect(children[1].owner).toBeNull();
+    expectUniqueSelects();
+  });
+
+  test('keeps nested select-in fields while selecting the shared root FK once', async () => {
+    const em = orm.em.fork();
+    const children = await em.find(
+      ProjectionChild,
+      {},
+      {
+        fields: ['id', 'ownerId', 'owner.name'],
+        populate: ['owner'],
+        strategy: LoadStrategy.SELECT_IN,
+        orderBy: { id: 'asc' },
+      },
+    );
+    expect(children.map(child => child.ownerId)).toEqual(['owner-a', null]);
+    expect(children[0].owner?.id).toBe('owner-a');
+    expect(children[0].owner?.name).toBe('Alpha');
+    expect((children[0].owner as ProjectionOwner).details).toBeUndefined();
+    expect(children[1].owner).toBeNull();
+    expect(await em.findOneOrFail(ProjectionOwner, 'owner-a', { fields: ['name'] })).toBe(children[0].owner);
+    const rootQueries = selects.filter(sql => sql.includes(`from \`${prefix}_child\``));
+    expect(rootQueries.length).toBeGreaterThan(0);
+    for (const sql of rootQueries) {
+      expect(outputColumns(sql, orm.getMetadata(ProjectionChild)).filter(column => column === 'owner_id')).toHaveLength(
+        1,
+      );
+    }
     expectUniqueSelects();
   });
 

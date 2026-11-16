@@ -18,6 +18,9 @@ import {
   type PopulateOptions,
   ReferenceKind,
   QueryFlag,
+  type ConnectionType,
+  type Transaction,
+  type LoggingOptions,
 } from '@mikro-orm/core';
 import { Kysely } from 'kysely';
 import {
@@ -26,9 +29,11 @@ import {
   type QBFilterQuery,
   type AnyQueryBuilder,
   type InternalField,
+  type SqlEntityManager,
 } from '@mikro-orm/sql';
 import { YdbSqlConnection } from './YdbSqlConnection.js';
 import { YdbSqlPlatform } from './YdbSqlPlatform.js';
+import { withYdbJoinedFilters } from './YdbJoinedFilters.js';
 
 /** Components created for one ORM instance. `driverOptions` remains reserved for native SDK options. */
 export interface YdbSqlDriverComponents {
@@ -64,6 +69,20 @@ export class YdbSqlDriver extends AbstractSqlDriver<YdbSqlConnection, YdbSqlPlat
     const native = this.connection.getYdbConnection();
     native.setMetadata(metadata);
     native.setPlatform(this.platform);
+  }
+
+  override createQueryBuilder<T extends object>(
+    entityName: EntityName<T> | AnyQueryBuilder<T>,
+    ctx?: Transaction,
+    preferredConnectionType?: ConnectionType,
+    convertCustomTypes?: boolean,
+    loggerContext?: LoggingOptions,
+    alias?: string,
+    em?: SqlEntityManager,
+  ): AnyQueryBuilder<T> {
+    return withYdbJoinedFilters(
+      super.createQueryBuilder(entityName, ctx, preferredConnectionType, convertCustomTypes, loggerContext, alias, em),
+    );
   }
 
   private getSharedForeignKey(meta: EntityMetadata, prop: EntityProperty): EntityProperty | undefined {
