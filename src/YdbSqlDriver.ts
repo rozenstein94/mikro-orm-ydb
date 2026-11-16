@@ -12,9 +12,21 @@ import {
   type FilterQuery,
   type MetadataStorage,
   type QueryResult,
+  type EntityMetadata,
+  type EntityProperty,
+  type FindOptions,
+  type PopulateOptions,
+  ReferenceKind,
+  QueryFlag,
 } from '@mikro-orm/core';
 import { Kysely } from 'kysely';
-import { AbstractSqlDriver, Kysely as SqlKysely, type QBFilterQuery } from '@mikro-orm/sql';
+import {
+  AbstractSqlDriver,
+  Kysely as SqlKysely,
+  type QBFilterQuery,
+  type AnyQueryBuilder,
+  type InternalField,
+} from '@mikro-orm/sql';
 import { YdbSqlConnection } from './YdbSqlConnection.js';
 import { YdbSqlPlatform } from './YdbSqlPlatform.js';
 
@@ -53,6 +65,87 @@ export class YdbSqlDriver extends AbstractSqlDriver<YdbSqlConnection, YdbSqlPlat
     native.setMetadata(metadata);
     native.setPlatform(this.platform);
   }
+
+  private getSharedForeignKey(meta: EntityMetadata, prop: EntityProperty): EntityProperty | undefined {
+    if (
+      prop.persist !== false ||
+      prop.kind !== ReferenceKind.MANY_TO_ONE ||
+      !prop.formula ||
+      prop.embedded ||
+      prop.fieldNames?.length !== 1 ||
+      !prop.targetMeta
+    )
+      return;
+    const targetMeta = prop.targetMeta;
+    return meta.props.find(
+      stored =>
+        stored.persist !== false &&
+        stored.kind === ReferenceKind.MANY_TO_ONE &&
+        stored.mapToPk &&
+        !stored.formula &&
+        stored.fieldNames?.length === 1 &&
+        stored.fieldNames[0] === prop.fieldNames[0] &&
+        stored.targetMeta?.root === targetMeta.root &&
+        stored.targetKey === prop.targetKey &&
+        stored.referencedColumnNames[0] === prop.referencedColumnNames[0],
+    );
+  }
+
+  protected override shouldHaveColumn<T, U>(
+    meta: EntityMetadata<T>,
+    prop: EntityProperty<U>,
+    populate: readonly PopulateOptions<U>[],
+    fields?: readonly InternalField<U>[],
+    exclude?: readonly InternalField<U>[],
+  ): boolean {
+    if (!super.shouldHaveColumn(meta, prop, populate, fields, exclude)) return false;
+    const stored = this.getSharedForeignKey(meta, prop);
+    // Joined aliases share the same physical output column; retain the alias when the stored property is absent.
+    return !stored || !super.shouldHaveColumn(meta, stored, populate, fields, exclude);
+  }
+
+  protected override buildFields<T extends object>(
+    meta: EntityMetadata<T>,
+    populate: PopulateOptions<T>[],
+    joinedProps: PopulateOptions<T>[],
+    qb: AnyQueryBuilder<T>,
+    alias: string,
+    options: Pick<FindOptions<T, any, any, any>, 'strategy' | 'fields' | 'exclude' | 'flags'>,
+    schema?: string,
+  ): InternalField<T>[] {
+    if (!meta.props.some(prop => this.getSharedForeignKey(meta, prop))) {
+      return super.buildFields(meta, populate, joinedProps, qb, alias, options, schema);
+    }
+    const normalized = options.fields ? this.normalizeFields(options.fields as InternalField<T>[]) : undefined;
+    const isRootWildcard = (field: string) => field === '*' || field === `${alias}.*`;
+    if (!normalized || normalized.some(isRootWildcard)) {
+      // A wildcard makes core QueryBuilder append virtual formulas later. Select metadata fields explicitly
+      // so the physical FK is emitted once, while independent formulas and nested selections remain intact.
+      const exclude = options.exclude ? [...options.exclude] : undefined;
+      const formulaPopulate = options.flags?.includes(QueryFlag.INCLUDE_LAZY_FORMULAS)
+        ? true
+        : normalized
+          ? []
+          : populate;
+      const projection = meta.props
+        .filter(
+          prop =>
+            this.platform.shouldHaveColumn(prop, normalized ? true : populate, exclude, false, false) ||
+            (prop.formula && this.platform.shouldHaveColumn(prop, formulaPopulate, exclude)),
+        )
+        .map(prop => prop.name);
+      const fields = normalized?.flatMap(field => (isRootWildcard(field) ? projection : [field])) ?? projection;
+      options = { ...options, fields: fields as typeof options.fields };
+    }
+    const fields = super.buildFields(meta, populate, joinedProps, qb, alias, options, schema);
+    return fields.filter(field => {
+      if (typeof field !== 'string') return true;
+      const prop = meta.props.find(prop => prop.name === field);
+      const stored = prop && this.getSharedForeignKey(meta, prop);
+      return !stored || !fields.includes(stored.name);
+    });
+  }
+
   override async nativeInsertMany<T extends object>(
     entityName: EntityName<T>,
     data: EntityDictionary<T>[],
