@@ -1,14 +1,36 @@
 # Verification record
 
-## 0.3.0 release preparation
+## 0.3.0 release and registry verification
 
-The release-preparation baseline is commit `be193c34ac4a932c7815f9ea9180f953ed3dd50e`. Against published MikroORM core/SQL/migrations **7.2.9** and one shared **Kysely 0.29.8**, the complete local suite passes **237/237 tests in 16 files, with no skipped tests**, together with formatting, build, and type-aware lint/typecheck. This includes the public extension API and physical `Decimal(35,18)` regression described in the historical evidence below. Decimal remains outside the default platform's feature policy.
+Version **0.3.0** is published as npm `latest`. The immutable release source is commit `c7ec4a8deec56bca8d74ff87efdb87a9d868fa3d`, tagged `v0.3.0`. It uses published MikroORM core/SQL/migrations **7.2.9** and one shared **Kysely 0.29.8** runtime. The [release-source Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43871465441) is green: every matrix job passes formatting, build, lint/typecheck, **237/237 tests in 16 files with no skipped tests**, and the three packed-consumer smoke checks against actual local YDB.
 
-The [Node 22/24/26 CI run for that exact commit](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43869268593) is green. Each matrix job passes dependency installation, format check, build, lint/typecheck, the complete real-YDB suite, and verification of the built archive from an isolated consumer. That archive step runs the core, SQL, and extension smoke scripts against actual local YDB. It is packaged-source evidence, not a registry-installation result.
+A fresh consumer installed **0.3.0 directly from the npm registry**, together with the exact matching MikroORM peers and Kysely version. Its lockfile resolves the driver to `https://registry.npmjs.org/@rozenshtein94/mikro-orm-ydb/-/mikro-orm-ydb-0.3.0.tgz`, and dependency inspection confirms one shared core and Kysely. The core, SQL, and extension smoke scripts all pass against actual local YDB. The TypeScript composition example from `EXTENDING.md` also compiles against the installed declarations; both legacy and new package-root exports are present.
 
-The installation guides are prepared for **0.3.0** and builds from `main`. This section does **not** claim that 0.3.0 has been published, assigned the npm `latest` tag, or installed and verified from the registry. Final release source/tag, archive integrity, and post-publication registry smoke results must be recorded after those actions actually complete. The immutable 0.2.0 archive and the earlier candidate SHAs/results remain separate historical evidence.
+The registry-consumer check installs the registry version rather than a local archive:
 
-Dynamic discovery still requires explicit platform validation before schema/write operations. The migration lock policy still releases the lock after a caught migration error and does not make DDL/history atomic. Native YQL/Table API evidence does not establish PostgreSQL wire compatibility, MikroORM v6 support, cloud IAM/TLS, managed Serverless behavior, or application-specific portability.
+```sh
+npm install --prefix /tmp/ydb-registry-consumer --ignore-scripts --save-exact \
+  @mikro-orm/core@7.2.9 @mikro-orm/sql@7.2.9 @mikro-orm/migrations@7.2.9 kysely@0.29.8 \
+  @rozenshtein94/mikro-orm-ydb@0.3.0
+npm ls --prefix /tmp/ydb-registry-consumer \
+  @mikro-orm/core @mikro-orm/sql @mikro-orm/migrations kysely --all
+cp scripts/smoke.mjs scripts/sql-smoke.mjs scripts/extensions-smoke.mjs /tmp/ydb-registry-consumer/
+cd /tmp/ydb-registry-consumer
+YDB_ENDPOINT=grpc://127.0.0.1:2136 YDB_DATABASE=/local node smoke.mjs
+YDB_ENDPOINT=grpc://127.0.0.1:2136 YDB_DATABASE=/local node sql-smoke.mjs
+YDB_ENDPOINT=grpc://127.0.0.1:2136 YDB_DATABASE=/local node extensions-smoke.mjs
+```
+
+The downloaded registry tarball and the uploaded GitHub release artifact are byte-identical. Their SHA256 and npm integrity are:
+
+```text
+SHA256: 9d5fb71d89ad42b8869ccb01e15a6f835c63e1f6c020ca10a122ff4fc1084b89
+integrity: sha512-ahtwft9aJ852725msmRgCsJXlj2qxVSKYGElhmqakHEec1mIto16HCOPBwOCJreYVcmjSg6V6VdRGak6sPo/GA==
+```
+
+The earlier release-preparation baseline `be193c34ac4a932c7815f9ea9180f953ed3dd50e` separately passed the complete **237/237** local suite, formatting, build, and type-aware lint/typecheck. Its [Node 22/24/26 CI](https://github.com/rozenstein94/mikro-orm-ydb/actions/runs/43869268593) also passed all tests and core/SQL/extension packed-consumer checks. The historical 235-test candidate SHAs, source-archive hash, canary results, and immutable 0.2.0 archive below remain separate evidence.
+
+Decimal remains outside the default platform's feature policy; the physical Decimal coverage uses the public extension API. Dynamic discovery still requires explicit platform validation before schema/write operations. The migration lock policy still releases the lock after a caught migration error and does not make DDL/history atomic. Native YQL/Table API evidence does not establish PostgreSQL wire compatibility, MikroORM v6 support, cloud IAM/TLS, managed Serverless behavior, or application-specific portability.
 
 ## Original core-driver validation
 
