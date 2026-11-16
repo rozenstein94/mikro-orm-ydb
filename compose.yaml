@@ -1,0 +1,14 @@
+services:
+  ydb:
+    image: ydbplatform/local-ydb:26.3.1.25@sha256:f05becf42387b33f5adcdb134983744cd935ea168136e2409de5af762efaeafc
+    platform: linux/amd64
+    hostname: localhost
+    ports:
+      - '127.0.0.1:2136:2136'
+      - '127.0.0.1:8765:8765'
+    environment:
+      GRPC_PORT: '2136'
+      MON_PORT: '8765'
+      YDB_USE_IN_MEMORY_PDISKS: 'true'
+      YDB_DEFAULT_LOG_LEVEL: 'NOTICE'
+    stop_grace_period: 30s

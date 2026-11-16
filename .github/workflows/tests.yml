@@ -1,0 +1,36 @@
+name: Tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npx --yes corepack yarn install --immutable
+      - run: docker compose -p mikro-ydb-ci up -d --wait --wait-timeout 180
+      - run: npx --yes corepack yarn format:check
+      - run: npx --yes corepack yarn build
+      - run: npx --yes corepack yarn lint
+      - run: YDB_INTEGRATION=1 npx --yes corepack yarn test
+      - name: Verify the built archive
+        run: |
+          npx --yes corepack yarn pack --out "$RUNNER_TEMP/driver.tgz"
+          mkdir -p "$RUNNER_TEMP/consumer"
+          npm install --prefix "$RUNNER_TEMP/consumer" --ignore-scripts @mikro-orm/core@7.2.9 "$RUNNER_TEMP/driver.tgz"
+          cp scripts/smoke.mjs "$RUNNER_TEMP/consumer/smoke.mjs"
+          node "$RUNNER_TEMP/consumer/smoke.mjs"
+      - if: failure()
+        run: docker compose -p mikro-ydb-ci logs --tail=150
+      - if: always()
+        run: docker compose -p mikro-ydb-ci down --volumes
